@@ -1,6 +1,6 @@
 ## Page features
 
-- Styling
-- Handle adding to favourites, do not clean after page reload
-- Filtering, pagination and sorting
+- MUI styling
+- Adding to favourites that persists after page reload
+- Table filtering, pagination and sorting
 - Progressive Web App
