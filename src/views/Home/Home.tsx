@@ -201,7 +201,7 @@ const Home = () => {
   //   return stabilizedThis.map((el: unknown) => el[0]);
   // }
 
-  const handleRequestSort = (property: string) => {
+  const handleRequestSort = (event: ChangeEvent<HTMLInputElement>, property: string) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
