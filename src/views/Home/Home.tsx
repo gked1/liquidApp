@@ -13,30 +13,24 @@ import LastPageIcon from '@mui/icons-material/LastPage';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import styles from './Home.module.css';
 
+/**
+ * Paginated, sorted and filtered table with favourite liquids
+ * @component 
+ */
+
 const Home: FC = () => {
-  /* Fetched random list */
   const [beerList, setBeerList] = useState<Array<Beer>>([]);
   const [filteredBeerList, setFilteredBeerList] = useState<Array<Beer>>([]);
   // const [savedList, setSavedList] = useState([]);
-  /* No of pages in table, rowsPerPage */
   const [tablePage, setTablePage] = useState<number>(0)
   const [rowsPerPage, setRowsPerPage] = useState<number>(10);
-  // const [searchedBeerId, setSearchedBeerId] = useState<string>('');
   const [searchedBeerName, setSearchedBeerName] = useState<string>('');
-  /* Filter label field clearing state */
-  const [shrinkSearchedBeerName, setShrinkSearchedBeerName] = useState<boolean>(false);
   const [order, setOrder] = useState<string>('asc');
   const [orderBy, setOrderBy] = useState<string>('id');
   const [addToFavouritesFilterState, setAddToFavouritesFilterState] = useState<Array<Beer>>([]);
   const [triggerCheckbox, setTriggerCheckbox] = useState<boolean>(false);
-  /* Show favourites only checkbox */
-  const [showFavouritesOnly, setShowFavouritesOnly] = useState<boolean>(false);
+  const [showFavouritesOnlyCheckbox, setShowFavouritesOnlyCheckbox] = useState<boolean>(false);
   const [reload, setReload] = useState<boolean>(false);
-
-  // eslint-disable-next-line
-  useEffect(
-    fetchData.bind(this, setBeerList)
-  , [reload])
 
   /* Initialize attributes preparing for further adding to favourites */
   const initializeAddedToFavouritesFilterState = () => {
@@ -48,13 +42,6 @@ const Home: FC = () => {
     }
   }
 
-  useEffect(() => {
-    initializeAddedToFavouritesFilterState();
-  }, [beerList])
-
-  // const handleSearchBeerChangeId = (e: unknown) => {
-  //   setSearchedBeerId(e.target.value)
-  // }
   const handleSearchedBeerNameChange = (e: ChangeEvent<HTMLInputElement>) => {
     setSearchedBeerName(e.target.value)
   }
@@ -75,7 +62,7 @@ const Home: FC = () => {
         beerList
           .filter((item: Beer) => (searchedBeerName !== '') ? checkIfSearchedValueExists(item.name, searchedBeerName) : item)
           // .filter(item => searchedBeerId !== '' ? item.id === searchedBeerId : item)
-          .filter((item: Beer) => showFavouritesOnly 
+          .filter((item: Beer) => showFavouritesOnlyCheckbox 
             ? localStorage?.getItem(`addToFavouritesFilterState_${item?.id}`) && JSON.parse(String(localStorage?.getItem(`addToFavouritesFilterState_${item?.id}`))).isFavourite
             : item)
           .map(item => {
@@ -84,17 +71,6 @@ const Home: FC = () => {
       )
     }
   }
-
-  /* Initialize filteredBeerList */
-  // useEffect(() => {
-  //   setBeerList(createSetFilteredBeerList)
-  // }, [beerList])
-
-  /* Update filteredBeerList depending on applied filters */
-  useEffect(() => {
-    setFilteredBeerList(createSetFilteredBeerList as Beer[]);
-    setTablePage(0);
-  }, [beerList, searchedBeerName, showFavouritesOnly, reload]) //searchedBeerId
 
   const handleChangePage = (newPage: number) => {
     setTablePage(newPage);
@@ -125,7 +101,7 @@ const Home: FC = () => {
                     opacity: .7,
                     cursor: 'pointer'
                   }}
-                  onClick={() => { setSearchedBeerName(''); setShrinkSearchedBeerName(false) }}
+                  onClick={() => { setSearchedBeerName('')}}
                 />
               )
             }}
@@ -138,10 +114,10 @@ const Home: FC = () => {
               control={
                 <span style={{color: '#0052A5', textAlign: 'end'}}>
                   <Checkbox
-                    name="showFavouritesOnly"
-                    value={showFavouritesOnly}
-                    checked={showFavouritesOnly}
-                    onChange={() => setShowFavouritesOnly(!showFavouritesOnly)}
+                    name="showFavouritesOnlyCheckbox"
+                    value={showFavouritesOnlyCheckbox}
+                    checked={showFavouritesOnlyCheckbox}
+                    onChange={() => setShowFavouritesOnlyCheckbox(!showFavouritesOnlyCheckbox)}
                     color="primary"
                     style={{padding: '0 9px 0 0'}}
                   />
@@ -174,6 +150,18 @@ const Home: FC = () => {
         </Grid>
       </Grid>
     )
+  }
+
+  const handleAddToFavouritesCheckbox = (e: ChangeEvent<HTMLInputElement>, beerId: unknown) => {
+    if (!e.target.checked) {
+      let updatedItem = addToFavouritesFilterState.filter((item: Beer) => item.id === beerId).map(item => item);
+      localStorage.setItem(`addToFavouritesFilterState_${beerId}`, JSON.stringify(Object.assign({}, updatedItem, {isFavourite: false })));
+      setTriggerCheckbox(!triggerCheckbox);
+    } else {
+      let updatedItem = addToFavouritesFilterState.filter((item: Beer) => item.id === beerId).map(item => item);
+      localStorage.setItem(`addToFavouritesFilterState_${beerId}`, JSON.stringify(Object.assign({}, updatedItem, {isFavourite: true })));
+      setTriggerCheckbox(!triggerCheckbox);
+    }
   }
 
   function descendingComparator(a: any, b: any, orderBy: string) {
@@ -210,21 +198,12 @@ const Home: FC = () => {
 
   const headCells = [
     { id: 'isFavourite', numeric: false, disablePadding: true, label: 'Favourite' },
-    { id: 'name', numeric: false, disablePadding: true, label: 'Name' }
+    { id: 'name', numeric: false, disablePadding: true, label: 'Name' },
+    { id: 'city', numeric: false, disablePadding: true, label: 'City' },
+    { id: 'state', numeric: false, disablePadding: true, label: 'State' },
+    { id: 'postal_code', numeric: false, disablePadding: true, label: 'Postal code' },
+    { id: 'country', numeric: false, disablePadding: true, label: 'Country' }
   ];
-
-  /* Adding to favourites */
-  const handleChange = (e: ChangeEvent<HTMLInputElement>, beerId: unknown) => {
-    if (!e.target.checked) {
-      let updatedItem = addToFavouritesFilterState.filter((item: Beer) => item.id === beerId).map(item => item);
-      localStorage.setItem(`addToFavouritesFilterState_${beerId}`, JSON.stringify(Object.assign({}, updatedItem, {isFavourite: false })));
-      setTriggerCheckbox(!triggerCheckbox);
-    } else {
-      let updatedItem = addToFavouritesFilterState.filter((item: Beer) => item.id === beerId).map(item => item);
-      localStorage.setItem(`addToFavouritesFilterState_${beerId}`, JSON.stringify(Object.assign({}, updatedItem, {isFavourite: true })));
-      setTriggerCheckbox(!triggerCheckbox);
-    }
-  }
 
   function EnhancedTableHead (props: any) {
     const { order, orderBy, onRequestSort, headCells } = props; //classes, onSelectAllClick, numSelected, rowCount,
@@ -252,15 +231,9 @@ const Home: FC = () => {
                   ?
                     <span
                       style={{
-                        border: 0,
-                        clip: 'rect(0 0 0 0)',
-                        height: 1,
-                        margin: -1,
-                        overflow: 'hidden',
-                        padding: 0,
-                        position: 'absolute',
-                        top: 20,
-                        width: 1
+                        border: 0, clip: 'rect(0 0 0 0)', height: 1, margin: -1,
+                        overflow: 'hidden', padding: 0, position: 'absolute',
+                        top: 20, width: 1
                       }}
                     >
                       {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
@@ -298,12 +271,32 @@ const Home: FC = () => {
                     checked={
                       localStorage?.getItem(`addToFavouritesFilterState_${beer?.id}`) && JSON.parse(String(localStorage?.getItem(`addToFavouritesFilterState_${beer?.id}`))).isFavourite
                     }
-                    onChange={event => handleChange(event, beer.id)}
+                    onChange={event => handleAddToFavouritesCheckbox(event, beer.id)}
                   />
                 </TableCell>
                 <TableCell style={{ paddingBottom: 0, paddingTop: 0 }}>
                   <Link component={RouterLink} to={`/beer/${beer?.id}`}>
                     {beer?.name}
+                  </Link>
+                </TableCell>
+                <TableCell style={{ paddingBottom: 0, paddingTop: 0 }}>
+                  <Link component={RouterLink} to={`/beer/${beer?.id}`}>
+                    {beer?.city}
+                  </Link>
+                </TableCell>
+                <TableCell style={{ paddingBottom: 0, paddingTop: 0 }}>
+                  <Link component={RouterLink} to={`/beer/${beer?.id}`}>
+                    {beer?.state}
+                  </Link>
+                </TableCell>
+                <TableCell style={{ paddingBottom: 0, paddingTop: 0 }}>
+                  <Link component={RouterLink} to={`/beer/${beer?.id}`}>
+                    {beer?.postal_code}
+                  </Link>
+                </TableCell>
+                <TableCell style={{ paddingBottom: 0, paddingTop: 0 }}>
+                  <Link component={RouterLink} to={`/beer/${beer?.id}`}>
+                    {beer?.country}
                   </Link>
                 </TableCell>
               </TableRow>
@@ -313,7 +306,6 @@ const Home: FC = () => {
     )
   }
 
-  /* Pagination table actions */
   const TablePaginationActions = (props: any) => {
     const theme = useTheme();
     const { count, page, rowsPerPage} = props;
@@ -372,7 +364,6 @@ const Home: FC = () => {
     );
   }
 
-  /* Pagination table tools: rowsPerPage, toggle between pages */
   function renderTablePaginationTool() {
     return (
       <TablePagination
@@ -396,6 +387,25 @@ const Home: FC = () => {
     )
   }
 
+  useEffect(
+    fetchData.bind(this, setBeerList)
+  , [reload])
+
+  /* Initialize filteredBeerList */
+  // useEffect(() => {
+  //   setBeerList(createSetFilteredBeerList)
+  // }, [beerList])
+
+  /* Update filteredBeerList depending on applied filters */
+  useEffect(() => {
+    setFilteredBeerList(createSetFilteredBeerList as Beer[]);
+    setTablePage(0);
+  }, [beerList, searchedBeerName, showFavouritesOnlyCheckbox, reload]) //searchedBeerId
+
+  useEffect(() => {
+    initializeAddedToFavouritesFilterState();
+  }, [beerList])
+
   return (
     <article>
       <section>
@@ -407,8 +417,7 @@ const Home: FC = () => {
               </div>
                 <TableContainer style={styles.tableContainer}>
                   <EnhancedTableHead
-                    // numSelected={beerList.length}
-                    order={order}
+                    order={order} // numSelected={beerList.length}
                     orderBy={orderBy}
                     onRequestSort={handleRequestSort}
                     rowCount={beerList.length}
