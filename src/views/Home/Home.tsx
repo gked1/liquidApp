@@ -1,5 +1,5 @@
 import { useEffect, useState, ChangeEvent, FC } from 'react';
-import { fetchData } from './utils';
+import { fetchData, getComparator, HeadCells } from './utils';
 import { Beer } from '../../types';
 import { Link as RouterLink } from 'react-router-dom';
 import {
@@ -19,9 +19,9 @@ import styles from './Home.module.css';
  */
 
 const Home: FC = () => {
+  
   const [beerList, setBeerList] = useState<Array<Beer>>([]);
   const [filteredBeerList, setFilteredBeerList] = useState<Array<Beer>>([]);
-  // const [savedList, setSavedList] = useState([]);
   const [tablePage, setTablePage] = useState<number>(0)
   const [rowsPerPage, setRowsPerPage] = useState<number>(10);
   const [searchedBeerName, setSearchedBeerName] = useState<string>('');
@@ -32,18 +32,13 @@ const Home: FC = () => {
   const [showFavouritesOnlyCheckbox, setShowFavouritesOnlyCheckbox] = useState<boolean>(false);
   const [reload, setReload] = useState<boolean>(false);
 
-  /* Initialize attributes preparing for further adding to favourites */
-  const initializeAddedToFavouritesFilterState = () => {
+  const initializeAttributesForItemsAddedToFavourites = () => {
     setAddToFavouritesFilterState([]);
-    if (beerList !== undefined && beerList.length !== 0) {
+    if (beerList.length !== 0) {
         beerList.map((item: Beer) => {
           setAddToFavouritesFilterState(oldArray => [...oldArray, {...item, isFavourite: false}])
         })
     }
-  }
-
-  const handleSearchedBeerNameChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setSearchedBeerName(e.target.value)
   }
 
   const checkIfSearchedValueExists = (object: string, value: string) => {
@@ -54,32 +49,19 @@ const Home: FC = () => {
     return tempState > 0;
   }
 
-  /* Create set based on beerList in order to further filtering */
-  const createSetFilteredBeerList: unknown = () => {
+  const createSetFilteredBeerList: unknown = () => { /* Create beerList-based set prepared for further filtering */
     setFilteredBeerList([])
-    if (beerList !== undefined) {
       return (
-        beerList
-          .filter((item: Beer) => (searchedBeerName !== '') ? checkIfSearchedValueExists(item.name, searchedBeerName) : item)
-          // .filter(item => searchedBeerId !== '' ? item.id === searchedBeerId : item)
-          .filter((item: Beer) => showFavouritesOnlyCheckbox 
-            ? localStorage?.getItem(`addToFavouritesFilterState_${item?.id}`) && JSON.parse(String(localStorage?.getItem(`addToFavouritesFilterState_${item?.id}`))).isFavourite
-            : item)
-          .map(item => {
-            setFilteredBeerList(oldArray => [...oldArray, item])
-          })
-      )
-    }
+      beerList
+        .filter((item: Beer) => (searchedBeerName !== '') ? checkIfSearchedValueExists(item.name, searchedBeerName) : item) // .filter(item => searchedBeerId !== '' ? item.id === searchedBeerId : item)
+        .filter((item: Beer) => showFavouritesOnlyCheckbox 
+          ? localStorage?.getItem(`addToFavouritesFilterState_${item?.id}`) && JSON.parse(String(localStorage?.getItem(`addToFavouritesFilterState_${item?.id}`))).isFavourite
+          : item)
+        .map(item => {
+          setFilteredBeerList(oldArray => [...oldArray, item])
+        })
+    )
   }
-
-  const handleChangePage = (newPage: number) => {
-    setTablePage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event: ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(+event.target.value);
-    setTablePage(0);
-  };
 
   const renderSearchTool = () => {
     return (
@@ -90,12 +72,10 @@ const Home: FC = () => {
             onChange={handleSearchedBeerNameChange}
             label='Filter by name'
             name="searchedBeerName"
-            variant='outlined'
-            // InputLabelProps={{ shrink: shrinkSearchedBeerName }}
+            variant='outlined' // InputLabelProps={{ shrink: shrinkSearchedBeerName }}
             InputProps={{
               endAdornment: searchedBeerName && (
-                <ClearIcon 
-                  // fontSize="default"
+                <ClearIcon
                   style={{
                     color: 'rgba(0, 0, 0, 0.54)',
                     opacity: .7,
@@ -152,50 +132,6 @@ const Home: FC = () => {
     )
   }
 
-  const handleAddToFavouritesCheckbox = (e: ChangeEvent<HTMLInputElement>, beerId: unknown) => {
-    if (!e.target.checked) {
-      let updatedItem = addToFavouritesFilterState.filter((item: Beer) => item.id === beerId).map(item => item);
-      localStorage.setItem(`addToFavouritesFilterState_${beerId}`, JSON.stringify(Object.assign({}, updatedItem, {isFavourite: false })));
-      setTriggerCheckbox(!triggerCheckbox);
-    } else {
-      let updatedItem = addToFavouritesFilterState.filter((item: Beer) => item.id === beerId).map(item => item);
-      localStorage.setItem(`addToFavouritesFilterState_${beerId}`, JSON.stringify(Object.assign({}, updatedItem, {isFavourite: true })));
-      setTriggerCheckbox(!triggerCheckbox);
-    }
-  }
-
-  function descendingComparator(a: any, b: any, orderBy: string) {
-    if (b[orderBy] < a[orderBy]) {
-      return -1;
-    }
-    if (b[orderBy] > a[orderBy]) {
-      return 1;
-    }
-    return 0;
-  }
-
-  function getComparator(order: string, orderBy: string) {
-    return order === 'desc'
-      ? (a: unknown, b: unknown) => descendingComparator(a, b, orderBy)
-      : (a: unknown, b: unknown) => -descendingComparator(a, b, orderBy);
-  }
-
-  // function stableSort(array: unknown, comparator: unknown) {
-  //   const stabilizedThis = array.map((el: unknown, index: unknown) => [el, index]);
-  //   stabilizedThis.sort((a: unknown, b: unknown) => {
-  //     const order = comparator(a[0], b[0]);
-  //     if (order !== 0) return order;
-  //     return a[1] - b[1];
-  //   });
-  //   return stabilizedThis.map((el: unknown) => el[0]);
-  // }
-
-  const handleRequestSort = (event: ChangeEvent<HTMLInputElement>, property: string) => {
-    const isAsc = orderBy === property && order === 'asc';
-    setOrder(isAsc ? 'desc' : 'asc');
-    setOrderBy(property);
-  };
-
   const headCells = [
     { id: 'isFavourite', numeric: false, disablePadding: true, label: 'Favourite' },
     { id: 'name', numeric: false, disablePadding: true, label: 'Name' },
@@ -205,18 +141,29 @@ const Home: FC = () => {
     { id: 'country', numeric: false, disablePadding: true, label: 'Country' }
   ];
 
-  function EnhancedTableHead (props: any) {
-    const { order, orderBy, onRequestSort, headCells } = props; //classes, onSelectAllClick, numSelected, rowCount,
+  function EnhancedTableHead (
+    {
+      order,
+      orderBy,
+      onRequestSort,
+      headCells
+    }: {
+      order: 'asc' | 'desc',
+      orderBy: string,
+      onRequestSort: (event: ChangeEvent<HTMLInputElement>, property: string) => void,
+      headCells: Array<HeadCells>
+    }
+  ) {
     const createSortHandler = (property: unknown) => (event: unknown) => {
-      onRequestSort(event, property);
+      onRequestSort(event as ChangeEvent<HTMLInputElement>, property as string);
     };
-  
+
     return (
       <TableHead>
         <TableRow>
-          {headCells.map((headCell: any) => (
+          {headCells.map(headCell => (
             <TableCell
-              key={headCell.id}
+              key={headCell?.id}
               align='center'
               padding={headCell.disablePadding ? 'none' : 'normal'}
               sortDirection={orderBy === headCell.id ? order : false}
@@ -251,7 +198,7 @@ const Home: FC = () => {
   const renderTableRows = () => {
     return (
       <>
-        {filteredBeerList !== undefined && filteredBeerList.length === 0
+        {filteredBeerList.length === 0
           ?
             <TableRow>
               <TableCell style={{textAlign: "center"}} colSpan={12}>
@@ -264,8 +211,7 @@ const Home: FC = () => {
             .slice().sort(getComparator(order, orderBy)) //modern browsers
             .slice(tablePage * rowsPerPage, tablePage * rowsPerPage + rowsPerPage)
             .map((beer: Beer, index: number) => (
-              <TableRow key={index.toString()}>
-                {/* id={beer?.name.toString()} */}
+              <TableRow key={index.toString()}> {/* id={beer?.name.toString()} */}
                 <TableCell style={{ paddingBottom: 0, paddingTop: 0 }}>
                   <Checkbox
                     checked={
@@ -306,22 +252,51 @@ const Home: FC = () => {
     )
   }
 
-  const TablePaginationActions = (props: any) => {
-    const theme = useTheme();
-    const { count, page, rowsPerPage} = props;
+  function renderTablePaginationTool() {
+    return (
+      <TablePagination
+        style={{
+          margin: '0 auto', display: 'flex', outline: '4px solid #fff', border: '2px solid #fff', marginTop: '5px',
+          justifyContent: 'center', color: '#0052A5'
+        }}
+        labelDisplayedRows={
+          item => `Page ${item.page + 1} of ${filteredBeerList.length === 0 ? 1 : Math.floor((filteredBeerList.length !== 0 ? filteredBeerList.length : 0) / rowsPerPage + (beerList.length !== 0 && filteredBeerList.length % rowsPerPage === 0 ? 0 : 1))}`
+        }
+        labelRowsPerPage="Items per page"
+        rowsPerPageOptions={[1, 3, 5, 10]}
+        component="div"
+        count={filteredBeerList.length !== 0 ? filteredBeerList.length : 10}
+        rowsPerPage={rowsPerPage}
+        page={tablePage}
+        onPageChange={handleChangePage as () => void}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        ActionsComponent={TablePaginationActions as FC}
+      />
+    )
+  }
 
+  const TablePaginationActions = (
+    {
+      count,
+      page,
+      rowsPerPage
+    }: {
+      count: number,
+      page: number,
+      rowsPerPage: number
+    }
+  ) => {
+    const theme = useTheme();
+    
     const handleFirstPageButtonClick = () => {
       handleChangePage(0);
     };
-
     const handleBackButtonClick = () => {
       handleChangePage(page - 1);
     };
-
     const handleNextButtonClick = () => {
       handleChangePage(page + 1);
     };
-
     const handleLastPageButtonClick = () => {
       handleChangePage(Math.max(0, Math.ceil(count / rowsPerPage) - 1));
     };
@@ -364,47 +339,57 @@ const Home: FC = () => {
     );
   }
 
-  function renderTablePaginationTool() {
-    return (
-      <TablePagination
-        style={{
-          margin: '0 auto', display: 'flex', outline: '4px solid #fff', border: '2px solid #fff', marginTop: '5px',
-          justifyContent: 'center', color: '#0052A5'
-        }}
-        labelDisplayedRows={
-          item => `Page ${item.page + 1} of ${filteredBeerList.length === 0 ? 1 : Math.floor((filteredBeerList !== undefined ? filteredBeerList.length : 0) / rowsPerPage + (beerList.length !== 0 && filteredBeerList.length % rowsPerPage === 0 ? 0 : 1))}`
-        }
-        labelRowsPerPage="Items per page"
-        rowsPerPageOptions={[1, 3, 5, 10]}
-        component="div"
-        count={filteredBeerList !== undefined ? filteredBeerList.length : 10}
-        rowsPerPage={rowsPerPage}
-        page={tablePage}
-        onPageChange={handleChangePage as any}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-        ActionsComponent={TablePaginationActions as any}
-      />
-    )
+  /* Handlers */
+
+  const handleSearchedBeerNameChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setSearchedBeerName(e.target.value)
   }
+
+  const handleChangePage = (newPage: number) => {
+    setTablePage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(+event.target.value);
+    setTablePage(0);
+  };
+
+  const handleAddToFavouritesCheckbox = (e: ChangeEvent<HTMLInputElement>, beerId: unknown) => {
+    if (!e.target.checked) {
+      let updatedItem = addToFavouritesFilterState.filter((item: Beer) => item.id === beerId).map(item => item);
+      localStorage.setItem(`addToFavouritesFilterState_${beerId}`, JSON.stringify(Object.assign({}, updatedItem, {isFavourite: false })));
+      setTriggerCheckbox(!triggerCheckbox);
+    } else {
+      let updatedItem = addToFavouritesFilterState.filter((item: Beer) => item.id === beerId).map(item => item);
+      localStorage.setItem(`addToFavouritesFilterState_${beerId}`, JSON.stringify(Object.assign({}, updatedItem, {isFavourite: true })));
+      setTriggerCheckbox(!triggerCheckbox);
+    }
+  }
+
+  const handleRequestSort = (event: ChangeEvent<HTMLInputElement>, property: string) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  /* Effects */
 
   useEffect(
     fetchData.bind(this, setBeerList)
   , [reload])
 
-  /* Initialize filteredBeerList */
-  // useEffect(() => {
+  useEffect(() => {
+    initializeAttributesForItemsAddedToFavourites();
+  }, [beerList])
+
+  // useEffect(() => {  /* Initialize filteredBeerList */
   //   setBeerList(createSetFilteredBeerList)
   // }, [beerList])
 
-  /* Update filteredBeerList depending on applied filters */
-  useEffect(() => {
+  useEffect(() => {  /* Update filteredBeerList depending on applied filters */
     setFilteredBeerList(createSetFilteredBeerList as Beer[]);
     setTablePage(0);
   }, [beerList, searchedBeerName, showFavouritesOnlyCheckbox, reload]) //searchedBeerId
-
-  useEffect(() => {
-    initializeAddedToFavouritesFilterState();
-  }, [beerList])
 
   return (
     <article>
@@ -417,11 +402,10 @@ const Home: FC = () => {
               </div>
                 <TableContainer style={styles.tableContainer}>
                   <EnhancedTableHead
-                    order={order} // numSelected={beerList.length}
+                    order={order as 'asc' | 'desc'} // numSelected={beerList.length} rowCount={beerList.length}
                     orderBy={orderBy}
                     onRequestSort={handleRequestSort}
-                    rowCount={beerList.length}
-                    headCells={headCells}
+                    headCells={headCells as Array<HeadCells>}
                   />
                   <TableBody>{renderTableRows()}</TableBody>
                 </TableContainer>
